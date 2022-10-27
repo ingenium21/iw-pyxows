@@ -10,15 +10,26 @@ async def start():
     ce_pass = os.getenv('CE_PASS')
 
     async with xows.XoWSClient(ce_host,username=ce_user, password=ce_pass) as client:
-            def callback(data, id_, ce_host):
-                print(f'Host: {ce_host}\nFeedback(Id {id_}): {data}')
+            async def callback(data, id_):
+                if id_ == 1:
+                    print("new call was made")
+                    print("=============================")
+                    print("getting latest call")
+                    print(await client.xCommand(['CallHistory','Get'], Limit=1))
 
-            print('Subscription 0:',
-            await client.subscribe(['Status', 'Audio', 'Volume'], callback, True))
+                print(f'Feedback(Id {id_}): {data}')
 
-            print("Subscription 1:",
-            await client.subscribe(['Command', 'CallHistory', 'Get'], Limit=1))
+            print('Subscription volume:')
+            volume_id = await client.subscribe(['Status', 'Audio', 'Volume'], callback, True)
 
+            print("Subscription callHistory Event:")
+            callHistory_id = await client.subscribe(['Event', 'CallHistory'], callback, True)
+
+            # print("Subscription Configuration")
+            # configuration_id = await client.subscribe(['Configuration'], callback, True)
             await client.wait_until_closed()
 
-asyncio.run(start())
+try:
+    asyncio.run(start())
+except KeyboardInterrupt:
+    print("Keyboard interrupt; exiting...")
