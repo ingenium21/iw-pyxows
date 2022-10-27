@@ -1,5 +1,11 @@
 server:
-  log_level: debug
+  log_level: warn
+metrics:
+  wal_directory: C:\ProgramData\grafana-agent-wal
+  global:
+    scrape_interval: 1m
+  configs:
+    - name: integrations
 logs:
   # Choose a directory to save the last read position of log files at.
   # This directory will be created if it doesn't already exist.
@@ -15,3 +21,6 @@ logs:
           - targets: [localhost]
             labels:
             __path__: "C:\\Program Files\\Grafana Agent\\logs\\*log"
+integrations:
+  windows_exporter:
+    enabled: true
