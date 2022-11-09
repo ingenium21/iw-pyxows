@@ -2,16 +2,20 @@ import xows
 import asyncio
 from dotenv import load_dotenv
 import os
+import json
 
 def append_to_log(ce_host, logPath, output, command):
     """This function is primarily used to append the output to the log file"""
-    filename = f"{logPath}{ce_host}_{command}.log"
-    if os.path.exists(filename):
-        with open(filename, 'a', encoding='utf-8') as fn:
-            fn.write(output)
-    else:
-        with open(filename, 'w', encoding='utf-8') as fn:
-            fn.write(output)
+    filename = f"{logPath}\\{ce_host}_{command}.json"
+    for o in output:
+        if os.path.exists(filename):
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(o, fn)
+                fn.write('\n')
+        else:
+            with open(filename, 'w', encoding='utf-8') as fn:
+                json.dump(o, fn)
+                fn.write('\n')
 
 async def start():
     load_dotenv()
@@ -26,7 +30,9 @@ async def start():
                     print("new call was made")
                     print("=============================")
                     print("getting latest call")
-                    call_history = await client.xCommand(['CallHistory','Get'], Limit=1)
+                    call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
+                    call_history = call_history['Entry']
+                    call_history.reverse()
                     # print(await client.xCommand(['CallHistory','Get'], Limit=1))
                     append_to_log(ce_host, log_path, call_history, 'CallHistory')
 
