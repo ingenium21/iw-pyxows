@@ -15,7 +15,6 @@ class Device:
         self.username = username
         self.password = password
         self.log_path = log_path
-        self.client
 
 
     def append_to_log(self, ce_host, logPath, output, command):
@@ -28,15 +27,7 @@ class Device:
             with open(filename, 'w', encoding='utf-8') as fn:
                 fn.write(output)
 
-    def connect(self):
-        """Connects to the device using websockets"""
-        self.client = xows.XoWSClient(self.ip_address,username=self.username, password=self.password)
-        self.client.connect()
-    
-    def disconnect(self):
-        self.client.disconnect()
-
-    async def connect1(self):
+    async def connect(self):
         """connects to the device using websockets"""
         async with xows.XoWSClient(self.ip_address,username=self.username, password=self.password) as client:
             async def callback(data, id_):
@@ -47,9 +38,7 @@ class Device:
                     call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
                     call_history = call_history['Entry']
                     call_history.reverse()
-                    print(self.ip_address)
-                    print(await client.xCommand(['CallHistory','Get'], Limit=1))
-                    # append_to_log(ce_host, log_path, call_history, 'CallHistory')
+                    append_to_log(ce_host, log_path, call_history, 'CallHistory')
 
 
                 print(f'Feedback(Id {id_}): {data}')
@@ -64,30 +53,8 @@ class Device:
             # configuration_id = await client.subscribe(['Configuration'], callback, True)
             await client.wait_until_closed()
     
-    async def get_call_history(self, client, limit=1):
-        """Gets the call history. 
-        Takes a limit variable"""
-        call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
-        return call_history
-    
-    async def set_call_history_subscription(self, client):
-        """Creates a callHistory event subscription"""
-        await client.subscribe(['Event', 'CallHistory'], self.callback, True)
 
-    async def set_volume_subscription(self):
-        volume_id = await self.subscribe(['Status', 'Audio', 'Volume'], self.callback, True)
-        await volume_id
-
-    async def callback(self, client, data, id_):
-        if id == 0:
-            print("new call was made")
-            print("=============================")
-            print("getting latest call")
-            call_history = client.get_call_history()
-            print(call_history)
-            return call_history
-
-def main():
+async def main():
     load_dotenv()
     name = "device1"
     ip_address = os.getenv('CE_HOST')
@@ -95,8 +62,8 @@ def main():
     password = os.getenv('CE_PASS')
     log_path = os.getenv('LOG_PATH')
     dev1 = Device(name=name, ip_address=ip_address, username=username, password=password, log_path=log_path)
-    dev1.connect()
-    
+    await dev1.connect()
+
     
 
 
