@@ -15,6 +15,7 @@ class Device:
         self.username = username
         self.password = password
         self.log_path = log_path
+        self.client
 
 
     def append_to_log(self, ce_host, logPath, output, command):
@@ -26,8 +27,16 @@ class Device:
         else:
             with open(filename, 'w', encoding='utf-8') as fn:
                 fn.write(output)
+
+    def connect(self):
+        """Connects to the device using websockets"""
+        self.client = xows.XoWSClient(self.ip_address,username=self.username, password=self.password)
+        self.client.connect()
     
-    async def connect(self):
+    def disconnect(self):
+        self.client.disconnect()
+
+    async def connect1(self):
         """connects to the device using websockets"""
         async with xows.XoWSClient(self.ip_address,username=self.username, password=self.password) as client:
             async def callback(data, id_):
@@ -58,7 +67,7 @@ class Device:
     async def get_call_history(self, client, limit=1):
         """Gets the call history. 
         Takes a limit variable"""
-        call_history = await client.xCommand(['CallHistory','Get'], Limit=1)
+        call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
         return call_history
     
     async def set_call_history_subscription(self, client):
@@ -78,7 +87,7 @@ class Device:
             print(call_history)
             return call_history
 
-async def main():
+def main():
     load_dotenv()
     name = "device1"
     ip_address = os.getenv('CE_HOST')
@@ -86,7 +95,8 @@ async def main():
     password = os.getenv('CE_PASS')
     log_path = os.getenv('LOG_PATH')
     dev1 = Device(name=name, ip_address=ip_address, username=username, password=password, log_path=log_path)
-    await dev1.connect()
+    dev1.connect()
+    
     
 
 
