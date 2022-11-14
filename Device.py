@@ -16,7 +16,12 @@ class Device:
         self.password = password
         self.log_path = log_path
 
-
+    def check_log_path(self):
+        """Checks to make sure the logpath exists"""
+        isExist = os.path.exists(self.log_path)
+        if isExist == False:
+            os.makedirs(self.log_path)
+            
     def append_to_log(self, ce_host, logPath, output, command):
         """This function is primarily used to append the output to the log file"""
         filename = f"{logPath}{ce_host}_{command}.log"
@@ -62,6 +67,7 @@ async def main():
     password = os.getenv('CE_PASS')
     log_path = os.getenv('LOG_PATH')
     dev1 = Device(name=name, ip_address=ip_address, username=username, password=password, log_path=log_path)
+    dev1.check_log_path()
     await dev1.connect()
 
     
