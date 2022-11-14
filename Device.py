@@ -43,7 +43,7 @@ class Device:
                     call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
                     call_history = call_history['Entry']
                     call_history.reverse()
-                    append_to_log(ce_host, log_path, call_history, 'CallHistory')
+                    self.append_to_log(ce_host, log_path, call_history, 'CallHistory')
 
 
                 print(f'Feedback(Id {id_}): {data}')
