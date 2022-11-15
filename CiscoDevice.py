@@ -37,8 +37,10 @@ class CiscoDevice(Device):
             print("new call was made")
             print("=============================")
             print("getting latest call")
-            call_history = self.get_call_history()
-            print(call_history)
+            call_history = await self.get_call_history()
+            call_history = call_history['Entry']
+            call_history.reverse()
+            self.append_to_log(call_history, "CallHistory")
         
         print(f'Feedback(Id {id_}): {data}')
 
@@ -55,5 +57,5 @@ async def main():
     await dev1.set_volume_subscription()
     await dev1.client.wait_until_closed()
 
-if __name__ is "__main__":
+if __name__ == "__main__":
     asyncio.run(main())
