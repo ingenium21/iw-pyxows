@@ -38,7 +38,9 @@ class CiscoDevice(Device):
             print("=============================")
             print("getting latest call")
             call_history = await self.get_call_history()
-            print(call_history)
+            call_history = call_history['Entry']
+            call_history.reverse()
+            self.append_to_log(call_history, "CallHistory")
         
         print(f'Feedback(Id {id_}): {data}')
 
