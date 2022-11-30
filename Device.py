@@ -20,16 +20,16 @@ class Device:
 
     def append_to_log(self, output, command):
         """This function is primarily used to append the output to the log file"""
-        filename = f"{self.log_path}\\{self.ip_address}_{command}.json"
-        for o in output:
-            if os.path.exists(filename):
-                with open(filename, 'a', encoding='utf-8') as fn:
-                    json.dump(o, fn)
-                    fn.write('\n')
-            else:
-                with open(filename, 'w', encoding='utf-8') as fn:
-                    json.dump(o, fn)
-                    fn.write('\n')
+        edited_ip = self.ip_address.replace(".", "_")
+        filename = f"{self.log_path}\\{edited_ip}_{command}.json"
+        if os.path.exists(filename):
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(output, fn)
+                fn.write('\n')
+        else:
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(output, fn)
+                fn.write('\n')
 
     async def connect(self):
         """connects to the device using websockets"""

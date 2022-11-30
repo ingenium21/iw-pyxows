@@ -9,6 +9,7 @@ class CiscoDevice(Device):
     def __init__(self, name, ip_address, username, password, log_path):
         super().__init__(name, ip_address, username, password, log_path)
         self.client =  xows.XoWSClient(self.ip_address,username=self.username, password=self.password)
+        self.iterator = 0
 
     async def connect(self):
         """Connects to the device using websockets"""
@@ -26,11 +27,39 @@ class CiscoDevice(Device):
         """Creates a volume event subscription"""
         await self.client.subscribe(['Status', 'Audio', 'Volume'], self.callback, True)
     
+    async def set_xStatus_subscription(self):
+        """Creates a xstatus subscription"""
+        await self.client.subscribe(['Status'], self.callback, True)
+    
     def get_call_history(self, limit=1):
         """Gets the call history. 
         Takes a limit variable"""
         call_history = self.client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
         return call_history
+
+    def prepare_call_history(self, call_history):
+        call_history = call_history['Entry']
+        call_history.reverse()
+        return call_history
+    
+    def get_xstatus(self):
+        """Gets the xstatus"""
+        xstatus = self.client.xGet(['Status'])
+        return xstatus
+
+    def check_iterator(self):
+        """Checks the iterator to see if it's time to run the new xstatus command"""
+        if self.iterator == 0:
+            self.iterator+=1
+            return True
+        elif self.iterator < 900:
+            self.iterator+=1
+            return False
+        else:
+            self.iterator = 1
+            return True
+        
+
     
     async def callback(self, data, id_):
         if id_ == 0:
@@ -38,9 +67,16 @@ class CiscoDevice(Device):
             print("=============================")
             print("getting latest call")
             call_history = await self.get_call_history()
-            call_history = call_history['Entry']
-            call_history.reverse()
-            self.append_to_log(call_history, "CallHistory")
+            call_history = self.prepare_call_history(call_history)
+            for call in call_history:
+                self.append_to_log(call, "CallHistory")
+        elif id_ == 2:
+            print("status changed")
+            if self.check_iterator():
+                xstatus  = await self.get_xstatus()
+                self.append_to_log(xstatus, "xstatus")
+
+
         
         print(f'Feedback(Id {id_}): {data}')
 
@@ -55,6 +91,7 @@ async def main():
     await dev1.connect()
     await dev1.set_call_history_subscription()
     await dev1.set_volume_subscription()
+    await dev1.set_xStatus_subscription()
     await dev1.client.wait_until_closed()
 
 if __name__ == "__main__":
