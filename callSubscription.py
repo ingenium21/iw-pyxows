@@ -35,6 +35,12 @@ async def start():
                     call_history.reverse()
                     # print(await client.xCommand(['CallHistory','Get'], Limit=1))
                     append_to_log(ce_host, log_path, call_history, 'CallHistory')
+                elif id_ == 2:
+                    print("Status was changed")
+                    print("=============================")
+                    print("getting latest status")
+                    xstatus = await client.xGet(['Status'])
+                    append_to_log(ce_host, log_path, xstatus, 'xStatus') 
 
 
                 print(f'Feedback(Id {id_}): {data}')
@@ -44,6 +50,9 @@ async def start():
 
             print("Subscription callHistory Event:")
             callHistory_id = await client.subscribe(['Event', 'CallHistory'], callback, True)
+
+            print("Subscription Status Event:")
+            xstatus_id = await client.subscribe(['Status'], callback, True)
 
             # print("Subscription Configuration")
             # configuration_id = await client.subscribe(['Configuration'], callback, True)

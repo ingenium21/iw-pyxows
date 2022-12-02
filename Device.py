@@ -4,6 +4,7 @@ import xows
 import asyncio
 from dotenv import load_dotenv
 import os
+import json
 
 class Device:
     """A Class to manage the device"""
@@ -22,15 +23,18 @@ class Device:
         if isExist == False:
             os.makedirs(self.log_path)
             
-    def append_to_log(self, ce_host, logPath, output, command):
+    def append_to_log(self, output, command):
         """This function is primarily used to append the output to the log file"""
-        filename = f"{logPath}{ce_host}_{command}.log"
+        edited_ip = self.ip_address.replace(".", "_")
+        filename = f"{self.log_path}\\{edited_ip}_{command}.json"
         if os.path.exists(filename):
             with open(filename, 'a', encoding='utf-8') as fn:
-                fn.write(output)
+                json.dump(output, fn)
+                fn.write('\n')
         else:
-            with open(filename, 'w', encoding='utf-8') as fn:
-                fn.write(output)
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(output, fn)
+                fn.write('\n')
 
     async def connect(self):
         """connects to the device using websockets"""
