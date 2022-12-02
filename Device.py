@@ -17,7 +17,12 @@ class Device:
         self.password = password
         self.log_path = log_path
 
-
+    def check_log_path(self):
+        """Checks to make sure the logpath exists"""
+        isExist = os.path.exists(self.log_path)
+        if isExist == False:
+            os.makedirs(self.log_path)
+            
     def append_to_log(self, output, command):
         """This function is primarily used to append the output to the log file"""
         edited_ip = self.ip_address.replace(".", "_")
@@ -42,7 +47,7 @@ class Device:
                     call_history = await client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
                     call_history = call_history['Entry']
                     call_history.reverse()
-                    append_to_log(ce_host, log_path, call_history, 'CallHistory')
+                    self.append_to_log(ce_host, log_path, call_history, 'CallHistory')
 
 
                 print(f'Feedback(Id {id_}): {data}')
@@ -66,6 +71,7 @@ async def main():
     password = os.getenv('CE_PASS')
     log_path = os.getenv('LOG_PATH')
     dev1 = Device(name=name, ip_address=ip_address, username=username, password=password, log_path=log_path)
+    dev1.check_log_path()
     await dev1.connect()
 
     
