@@ -9,7 +9,8 @@ class CiscoDevice(Device):
     def __init__(self, name, ip_address, username, password, log_path):
         super().__init__(name, ip_address, username, password, log_path)
         self.client =  xows.XoWSClient(self.ip_address,username=self.username, password=self.password)
-        self.iterator = 0
+        self.xstatus_iterator = 0
+        self.xconfig_iterator = 0
 
     async def connect(self):
         """Connects to the device using websockets"""
@@ -30,6 +31,10 @@ class CiscoDevice(Device):
     async def set_xStatus_subscription(self):
         """Creates a xstatus subscription"""
         await self.client.subscribe(['Status'], self.callback, True)
+
+    async def set_xConfiguration_subscription(self):
+        """Creates a xconfig subscription"""
+        await self.client.subscribe(['Configuration'], self.callback, True)
     
     def get_call_history(self, limit=1):
         """Gets the call history. 
@@ -47,18 +52,34 @@ class CiscoDevice(Device):
         xstatus = self.client.xGet(['Status'])
         return xstatus
 
-    def check_iterator(self):
+    def get_xconfiguration(self):
+        """Get's the xConfiguration"""
+        xconfig = self.client.xGet(['Configuration'])
+        return xconfig
+
+    def check_xstatus_iterator(self):
         """Checks the iterator to see if it's time to run the new xstatus command"""
-        if self.iterator == 0:
-            self.iterator+=1
+        if self.xstatus_iterator == 0:
+            self.xstatus_iterator+=1
             return True
-        elif self.iterator < 900:
-            self.iterator+=1
+        elif self.xstatus_iterator < 1800:
+            self.xstatus_iterator+=1
             return False
         else:
-            self.iterator = 1
+            self.xstatus_iterator = 1
             return True
-        
+
+    def check_xconfig_iterator(self):
+            """Checks the iterator to see if it's time to run the new xconfig command"""
+            if self.xconfig_iterator == 0:
+                self.xconfig_iterator+=1
+                return True
+            elif self.xconfig_iterator < 1800:
+                self.xconfig_iterator+=1
+                return False
+            else:
+                self.xconfig_iterator = 1
+                return True
 
     
     async def callback(self, data, id_):
@@ -72,10 +93,14 @@ class CiscoDevice(Device):
                 self.append_to_log(call, "CallHistory")
         elif id_ == 2:
             print("status changed")
-            if self.check_iterator():
+            if self.check_xstatus_iterator():
                 xstatus  = await self.get_xstatus()
                 self.append_to_log(xstatus, "xstatus")
-
+        elif id_ == 3:
+            print("configuration changed")
+            if self.check_xconfig_iterator():
+                xconfig = await self.get_xconfiguration()
+                self.append_to_log(xconfig, "xConfiguration")
 
         
         print(f'Feedback(Id {id_}): {data}')
@@ -92,6 +117,7 @@ async def main():
     await dev1.set_call_history_subscription()
     await dev1.set_volume_subscription()
     await dev1.set_xStatus_subscription()
+    await dev1.set_xConfiguration_subscription()
     await dev1.client.wait_until_closed()
 
 if __name__ == "__main__":
