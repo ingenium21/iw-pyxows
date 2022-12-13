@@ -1,13 +1,14 @@
-from requests import Session
+from requests import Session, request
 import json
 from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 class Capsascrape:
     """A Class to manage the connection to capsa and grab the things we need from their API"""
     
-    def __init__(self, url, username, password, clientId, clientSecret, apiUrl):
+    def __init__(self, url, username, password, clientId, clientSecret, apiUrl, organizationId, facilityId, cartId):
         """initialization method for the scraper"""
         self.url = url
         self.username = username
@@ -17,6 +18,9 @@ class Capsascrape:
         self.apiUrl = apiUrl
         self.token = ""
         self.session = Session()
+        self.organizationId = organizationId
+        self.FacilityId = facilityId
+        self.cartId = cartId
 
     def create_session(self):
         """Creates a session using the python requests library.
@@ -47,6 +51,73 @@ class Capsascrape:
                 token = json.loads(response.text)
                 token = token['Result']['Token']
                 self.token = token
+                self.session.headers.update = {
+                    'Authorization': 'Bearer ' + self.token,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'curl/7.83.1',
+                    'Accept': '*/*',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Accept-Language': 'en-US,en;q=0.9,es-MX;q=0.8,es-US;q=0.7,es;q=0.6',
+                    'Content-Length': '219',
+                    'Connection': 'keep-alive'
+                }
+
+    def get_battery_voltage(self):
+        """Gets the battery voltage of the cart so far we will be querying a part of the capsa API
+        That only grabs this data from a chart, so will require a startTime and endTime.  
+        If we can figure out a better API endpoint we can change it to that
+        ChartQuery=1 for battery voltage
+        time will be in UTC
+        """
+        response_url = f"{self.apiUrl}/analytics/chart"
+        endDate = datetime.utcnow
+        startDate = datetime.utcnow() - timedelta(hours=1)
+        self.session.headers = {
+                    'Authorization': 'Bearer ' + self.token,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'curl/7.83.1',
+                    'Accept': '*/*',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Accept-Language': 'en-US,en;q=0.9,es-MX;q=0.8,es-US;q=0.7,es;q=0.6',
+                    'Connection': 'keep-alive'
+                }
+        payload = {
+            'OrganizationId': self.organizationId,
+            'FacilityId': self.FacilityId,
+            'DeviceType': 9,
+            'ChartQuery': 1,
+            'GraphyByEntity': 1,
+            'Ids': [
+                self.cartId
+            ],
+            'StartDateUtc': '2022-12-12T06:00:00.000Z',
+            'EndDateUtc': '2022-12-13T06:00:00.000Z',
+            'LocalMinutesOffset': -360
+        }
+        response = request('POST',response_url, json=payload, headers=self.session.headers)
+        if response.status_code == 200:
+            voltage = response.text
+            print(voltage)
+
+    def get_by_id(self):
+        """gets all the cart info"""
+        self.session.headers = {
+                    'Authorization': 'Bearer ' + self.token,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'curl/7.83.1',
+                    'Accept': '*/*',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Accept-Language': 'en-US,en;q=0.9,es-MX;q=0.8,es-US;q=0.7,es;q=0.6',
+                    'Connection': 'keep-alive'
+                }
+        response_url = f"{self.apiUrl}/cart/GetById"
+        payload = {
+            'Id': self.cartId
+        }
+        response = request('POST', response_url, json=payload, headers=self.session.headers)
+        if response.status_code == 200:
+            text = response.text
+            print(text)
 
     def disconnect_session(self):
         self.session.close()
@@ -60,7 +131,14 @@ if __name__ == "__main__":
     password = os.getenv('CAP_PASS')
     clientId = os.getenv('CAP_CLIENT_ID')
     clientSecret = os.getenv('CAP_CLIENT_SECRET')
-    c = Capsascrape(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl)
+    organizationId = os.getenv('CAP_ORG_ID')
+    organizationId = int(organizationId)
+    facilityId = os.getenv('CAP_FACILITY_ID')
+    facilityId = int(facilityId)
+    cartId = os.getenv('CAP_CART_ID')
+
+    c = Capsascrape(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
     c.create_session()
     c.get_auth_token()
+    c.get_battery_voltage()
     c.disconnect_session()

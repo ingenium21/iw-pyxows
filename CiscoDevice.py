@@ -42,6 +42,11 @@ class CiscoDevice(Device):
         call_history = self.client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
         return call_history
 
+    def reboot_roomkit(self):
+        """reboots the roomkit"""
+        reboot = self.client.xCommand(['SystemUnit', 'Boot'], Action='Restart')
+        print(reboot)
+
     def prepare_call_history(self, call_history):
         call_history = call_history['Entry']
         call_history.reverse()
@@ -105,6 +110,30 @@ class CiscoDevice(Device):
         
         print(f'Feedback(Id {id_}): {data}')
 
+    def menu(self):
+        """simple cli menu to run some commands"""
+        while True:
+            print("1) reboot the roomkit")
+            print("2) disconnect from the roomkit")
+            print("3) keep doing what you're doing")
+            print("4) quit this menu")
+
+            choice = input("Enter your choice: ")
+            choice = choice.strip()
+            if (choice == "1"):
+                self.reboot_roomkit()
+            elif (choice == "2"):
+                self.disconnect()
+            elif (choice == "3"):
+                print("good choice")
+            elif (choice == "4"):
+                break
+            else:
+                print("Invalid Option.  Please try again")
+            
+
+
+
 async def main():
     load_dotenv()
     name = "device1"
@@ -119,6 +148,7 @@ async def main():
     await dev1.set_xStatus_subscription()
     await dev1.set_xConfiguration_subscription()
     await dev1.client.wait_until_closed()
+    dev1.menu()
 
 if __name__ == "__main__":
     asyncio.run(main())
