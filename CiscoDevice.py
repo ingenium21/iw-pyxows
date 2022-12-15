@@ -16,9 +16,9 @@ class CiscoDevice(Device):
         """Connects to the device using websockets"""
         await self.client.connect()
     
-    def disconnect(self):
+    async def disconnect(self):
         """Disconnects from the device"""
-        self.client.disconnect()
+        await self.client.disconnect()
 
     async def set_call_history_subscription(self):
         """Creates a callHistory event subscription"""
@@ -42,10 +42,9 @@ class CiscoDevice(Device):
         call_history = self.client.xCommand(['CallHistory','Get'], Limit=1, detaillevel='full')
         return call_history
 
-    def reboot_roomkit(self):
+    async def reboot_roomkit(self):
         """reboots the roomkit"""
-        reboot = self.client.xCommand(['SystemUnit', 'Boot'], Action='Restart')
-        print(reboot)
+        await self.client.xCommand(['SystemUnit', 'Boot'], Action='Restart')
 
     def prepare_call_history(self, call_history):
         call_history = call_history['Entry']
@@ -67,7 +66,7 @@ class CiscoDevice(Device):
         if self.xstatus_iterator == 0:
             self.xstatus_iterator+=1
             return True
-        elif self.xstatus_iterator < 1800:
+        elif self.xstatus_iterator < 3600:
             self.xstatus_iterator+=1
             return False
         else:
@@ -110,7 +109,7 @@ class CiscoDevice(Device):
         
         print(f'Feedback(Id {id_}): {data}')
 
-    def menu(self):
+    async def menu(self):
         """simple cli menu to run some commands"""
         while True:
             print("1) reboot the roomkit")
@@ -147,8 +146,9 @@ async def main():
     await dev1.set_volume_subscription()
     await dev1.set_xStatus_subscription()
     await dev1.set_xConfiguration_subscription()
+    #await dev1.menu()
     await dev1.client.wait_until_closed()
-    dev1.menu()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
