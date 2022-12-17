@@ -94,10 +94,15 @@ class Capsascrape:
             'EndDateUtc': '2022-12-13T06:00:00.000Z',
             'LocalMinutesOffset': -360
         }
+        #Had to use request because session was sending the wrong auth header
         response = request('POST',response_url, json=payload, headers=self.session.headers)
         if response.status_code == 200:
-            voltage = response.text
-            print(voltage)
+            voltage = json.loads(response.text)
+            #Hiearcahy of the response text is as below.
+            voltage = voltage['Entities'][0]['Values'][-1]['Value']
+            print("getting latest voltage")
+            return(voltage)
+
 
     def get_by_id(self):
         """gets all the cart info"""
