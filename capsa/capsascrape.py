@@ -101,7 +101,7 @@ class Capsascrape:
             #Hiearcahy of the response text is as below.
             voltage = voltage['Entities'][0]['Values'][-1]['Value']
             print("getting latest voltage")
-            print(voltage)
+            return(voltage)
 
 
     def get_by_id(self):
