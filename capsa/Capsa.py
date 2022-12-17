@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
-class Capsascrape:
+class Capsa:
     """A Class to manage the connection to capsa and grab the things we need from their API"""
     
     def __init__(self, url, username, password, clientId, clientSecret, apiUrl, organizationId, facilityId, cartId):
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     facilityId = int(facilityId)
     cartId = os.getenv('CAP_CART_ID')
 
-    c = Capsascrape(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
+    c = Capsa(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
     c.create_session()
     c.get_auth_token()
     c.get_battery_voltage()
