@@ -116,8 +116,11 @@ class Capsascrape:
         }
         response = request('POST', response_url, json=payload, headers=self.session.headers)
         if response.status_code == 200:
-            text = response.text
-            print(text)
+            voltage = json.loads(response.text)
+            #Hiearcahy of the response text is as below.
+            voltage = voltage['Entities'][0]['Values'][-1]['Value']
+            print("getting latest voltage")
+            print(voltage)
 
     def disconnect_session(self):
         self.session.close()

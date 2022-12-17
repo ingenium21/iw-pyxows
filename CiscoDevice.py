@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from Device import Device
 import asyncio
 import os
+from capsa import Capsascrape
 
 class CiscoDevice(Device):
     """A Class to manage the cisco device"""
@@ -66,19 +67,21 @@ class CiscoDevice(Device):
         if self.xstatus_iterator == 0:
             self.xstatus_iterator+=1
             return True
-        elif self.xstatus_iterator < 3600:
+        elif self.xstatus_iterator < 60:
             self.xstatus_iterator+=1
             return False
         else:
             self.xstatus_iterator = 1
             return True
 
-    def check_xconfig_iterator(self):
+    def check_xconfig_iterator(self, Debug=False):
             """Checks the iterator to see if it's time to run the new xconfig command"""
+            if Debug==True:
+                return True
             if self.xconfig_iterator == 0:
                 self.xconfig_iterator+=1
                 return True
-            elif self.xconfig_iterator < 1800:
+            elif self.xconfig_iterator < 500:
                 self.xconfig_iterator+=1
                 return False
             else:
@@ -102,7 +105,7 @@ class CiscoDevice(Device):
                 self.append_to_log(xstatus, "xstatus")
         elif id_ == 3:
             print("configuration changed")
-            if self.check_xconfig_iterator():
+            if self.check_xconfig_iterator(Debug=True):
                 xconfig = await self.get_xconfiguration()
                 self.append_to_log(xconfig, "xConfiguration")
 
@@ -140,7 +143,19 @@ async def main():
     username = os.getenv('CE_USER')
     password = os.getenv('CE_PASS')
     log_path = os.getenv('LOG_PATH')
+    url = os.getenv('CAP_URL')
+    apiUrl = os.getenv('CAP_API_URL')
+    username = os.getenv('CAP_USER')
+    password = os.getenv('CAP_PASS')
+    clientId = os.getenv('CAP_CLIENT_ID')
+    clientSecret = os.getenv('CAP_CLIENT_SECRET')
+    organizationId = os.getenv('CAP_ORG_ID')
+    organizationId = int(organizationId)
+    facilityId = os.getenv('CAP_FACILITY_ID')
+    facilityId = int(facilityId)
+    cartId = os.getenv('CAP_CART_ID')
     dev1 = CiscoDevice(name=name, ip_address=ip_address, username=username, password=password, log_path=log_path)
+    cap1 = Capsascrape(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
     await dev1.connect()
     await dev1.set_call_history_subscription()
     await dev1.set_volume_subscription()
