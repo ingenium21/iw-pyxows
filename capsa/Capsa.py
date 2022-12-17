@@ -4,6 +4,9 @@ from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from prometheus_client import start_http_server, Gauge
+from time import sleep
+
 
 class Capsa:
     """A Class to manage the connection to capsa and grab the things we need from their API"""
@@ -101,7 +104,7 @@ class Capsa:
             #Hiearcahy of the response text is as below.
             voltage = round(voltage['Entities'][0]['Values'][-1]['Value'],2)
             print("getting latest voltage")
-            print(voltage)
+            return voltage
 
 
     def get_by_id(self):
@@ -121,13 +124,24 @@ class Capsa:
         }
         response = request('POST', response_url, json=payload, headers=self.session.headers)
         if response.status_code == 200:
-            print(response.text)
+            return(200)
+        else:
+            return(400)
 
     def disconnect_session(self):
         self.session.close()
 
+    def create_gauge_for_metric(self, metric_dict):
+        """Creates the gauge metric"""
+        metric_name = "cart_battery_voltage{cartName='capsaCart'}"
+        
+    def set_value(self, metric_dict, value):
+        """sets gauge with value"""
+
+    
 
 if __name__ == "__main__":
+    start_http_server(9091)
     load_dotenv()
     url = os.getenv('CAP_URL')
     apiUrl = os.getenv('CAP_API_URL')
@@ -144,5 +158,15 @@ if __name__ == "__main__":
     c = Capsa(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
     c.create_session()
     c.get_auth_token()
-    c.get_battery_voltage()
+    metric_dict = {}
+    metric_name = "cart_battery_voltage"
+    metric_dict[metric_name] = Gauge(metric_name, "capsa cart's battery life")
+
+
+    statusCode = 200
+    while statusCode == 200:
+       statusCode = c.get_by_id()
+       volt = c.get_battery_voltage()
+       metric_dict[metric_name].set(volt)
+       sleep(60)
     c.disconnect_session()
