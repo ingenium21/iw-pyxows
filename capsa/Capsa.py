@@ -11,11 +11,12 @@ from time import sleep
 class Capsa:
     """A Class to manage the connection to capsa and grab the things we need from their API"""
     
-    def __init__(self, url, username, password, clientId, clientSecret, apiUrl, organizationId, facilityId, cartId):
+    def __init__(self, url, username, password, logPath, clientId, clientSecret, apiUrl, organizationId, facilityId, cartId, ipAddress):
         """initialization method for the scraper"""
         self.url = url
         self.username = username
         self.password = password
+        self.logPath = logPath
         self.clientId = clientId
         self.clientSecret = clientSecret
         self.apiUrl = apiUrl
@@ -24,6 +25,8 @@ class Capsa:
         self.organizationId = organizationId
         self.FacilityId = facilityId
         self.cartId = cartId
+        self.cartInfo = {}
+        self.ipAddress = ipAddress
 
     def create_session(self):
         """Creates a session using the python requests library.
@@ -73,8 +76,10 @@ class Capsa:
         time will be in UTC
         """
         response_url = f"{self.apiUrl}/analytics/chart"
-        endDate = datetime.utcnow
+        endDate = datetime.utcnow()
         startDate = datetime.utcnow() - timedelta(hours=1)
+        startDate = datetime.strftime(startDate, "%Y-%m-%dT%H:%M:%S.%f")
+        endDate = datetime.strftime(endDate, "%Y-%m-%dT%H:%M:%S.%f")
         self.session.headers = {
                     'Authorization': 'Bearer ' + self.token,
                     'Content-Type': 'application/json',
@@ -93,8 +98,8 @@ class Capsa:
             'Ids': [
                 self.cartId
             ],
-            'StartDateUtc': '2022-12-12T06:00:00.000Z',
-            'EndDateUtc': '2022-12-13T06:00:00.000Z',
+            'StartDateUtc': startDate,
+            'EndDateUtc': endDate,
             'LocalMinutesOffset': -360
         }
         #Had to use request because session was sending the wrong auth header
@@ -124,9 +129,25 @@ class Capsa:
         }
         response = request('POST', response_url, json=payload, headers=self.session.headers)
         if response.status_code == 200:
-            return(200)
+            self.cartInfo['lastStatusCode'] = 200
+            result = json.loads(response.text)
+            result = result['Result']
+            self.cartInfo['SerialNumber'] = result['SerialNumber']
+            self.cartInfo['LastNetworkAccessPoint'] = result['LastKnownNetworkAccessPoint']['Name']
+            #converting UTC to EST
+            lastConnected = datetime.strptime(result['LastImAliveUtc'],"%Y-%m-%dT%H:%M:%S.%f")
+            lastConnected = lastConnected - timedelta(hours=5)
+            lastConnected = datetime.strftime(lastConnected,"%Y-%m-%dT%H:%M:%S.%f" )
+            self.cartInfo['LastConnected'] = lastConnected
+            print(self.cartInfo)
+            return(self.cartInfo)
         else:
-            return(400)
+            self.cartInfo['lastStatusCode'] = response.status_code
+            return(self.cartInfo)
+
+        #     return(200)
+        # else:
+        #     return(400)
 
     def disconnect_session(self):
         self.session.close()
@@ -137,6 +158,25 @@ class Capsa:
         
     def set_value(self, metric_dict, value):
         """sets gauge with value"""
+    
+    def check_log_path(self):
+        """Checks to make sure the logpath exists"""
+        isExist = os.path.exists(self.logPath)
+        if isExist == False:
+            os.makedirs(self.logPath)
+            
+    def append_to_log(self, output, command):
+        """This function is primarily used to append the output to the log file"""
+        edited_ip = self.ipAddress.replace(".", "_")
+        filename = f"{self.logPath}\\{edited_ip}_{command}.json"
+        if os.path.exists(filename):
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(output, fn)
+                fn.write('\n')
+        else:
+            with open(filename, 'a', encoding='utf-8') as fn:
+                json.dump(output, fn)
+                fn.write('\n')
 
     
 
@@ -154,8 +194,11 @@ if __name__ == "__main__":
     facilityId = os.getenv('CAP_FACILITY_ID')
     facilityId = int(facilityId)
     cartId = os.getenv('CAP_CART_ID')
+    logPath = os.getenv('LOG_PATH')
+    ip_address = os.getenv('CE_HOST')
 
-    c = Capsa(url=url, username=username, password=password, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId)
+    c = Capsa(url=url, username=username, password=password, logPath=logPath, clientId=clientId, clientSecret=clientSecret, apiUrl=apiUrl, organizationId=organizationId, facilityId=facilityId, cartId=cartId, ipAddress=ip_address)
+    c.check_log_path()
     c.create_session()
     c.get_auth_token()
     metric_dict = {}
@@ -165,8 +208,10 @@ if __name__ == "__main__":
 
     statusCode = 200
     while statusCode == 200:
-       statusCode = c.get_by_id()
-       volt = c.get_battery_voltage()
-       metric_dict[metric_name].set(volt)
-       sleep(60)
+        cartInfo = c.get_by_id()
+        statusCode = cartInfo['lastStatusCode']
+        c.append_to_log(cartInfo,"CapsaCartInfo")
+        volt = c.get_battery_voltage()
+        metric_dict[metric_name].set(volt)
+        sleep(60)
     c.disconnect_session()
